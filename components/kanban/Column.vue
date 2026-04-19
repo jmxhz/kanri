@@ -213,6 +213,7 @@ import type { Card, Tag } from "@/types/kanban-types";
 import type { Ref } from "vue";
 
 import { applyDrag } from "@/utils/drag-n-drop";
+import { getCurrentTimestamp } from "@/utils/dateTime";
 import emitter from "@/utils/emitter";
 import { PlusIcon, EllipsisHorizontalIcon } from "@heroicons/vue/24/solid";
 //@ts-expect-error, sadly this library does not have ts typings
@@ -666,7 +667,6 @@ const onDrop = (dropResult: any) => {
 const getChildPayload = (index: number) => {
   // if we have search query, re-calculate the index
   if (props.cardSearchQuery) {
-    console.log("Filtering cards, using relative index");
     return filteredCards.value[index];
   }
 
@@ -726,6 +726,7 @@ const addCard = () => {
 
   const card: Card = {
     id: generateUniqueID(),
+    createdAt: getCurrentTimestamp(),
     name: newCardName.value,
     description: "",
     color: "",

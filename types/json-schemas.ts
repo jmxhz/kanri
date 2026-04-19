@@ -43,20 +43,31 @@ const kanriTagSchema = z.object({
   style: z.string().optional(),
 });
 
+const kanriSubtaskSchema = z.object({
+  completedAt: z.string().optional().nullable(),
+  createdAt: z.string().optional(),
+  id: z.string().optional(),
+  finished: z.boolean(),
+  name: z.string(),
+});
+
+const kanriTaskSchema = z.object({
+  completedAt: z.string().optional().nullable(),
+  createdAt: z.string().optional(),
+  id: z.string().optional(),
+  finished: z.boolean(),
+  name: z.string(),
+  dueDate: z.string().optional().nullable(),
+  subtasks: z.array(kanriSubtaskSchema).optional(),
+});
+
 const kanriCardSchema = z.object({
   color: z.string().optional(),
+  createdAt: z.string().optional(),
   description: z.string().optional(),
   id: z.string().optional(),
   name: z.string(),
-  tasks: z
-    .array(
-      z.object({
-        id: z.string().optional(),
-        finished: z.boolean(),
-        name: z.string(),
-      })
-    )
-    .optional(),
+  tasks: z.array(kanriTaskSchema).optional(),
   dueDate: z.string().optional().nullable(),
   tags: z.array(kanriTagSchema).optional().nullable(),
 });

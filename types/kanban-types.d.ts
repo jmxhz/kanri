@@ -42,6 +42,18 @@ export declare interface Column {
 }
 
 export declare interface Task {
+  completedAt?: Date | string | null;
+  createdAt?: Date | string;
+  finished: boolean;
+  id?: string;
+  dueDate?: Date | string | null;
+  name: string;
+  subtasks?: Array<Subtask>;
+}
+
+export declare interface Subtask {
+  completedAt?: Date | string | null;
+  createdAt?: Date | string;
   finished: boolean;
   id?: string;
   name: string;
@@ -56,6 +68,7 @@ export declare interface Tag {
 
 export declare interface Card {
   color?: string;
+  createdAt?: Date | string;
   description?: string;
   dueDate?: Date | string | null;
   id?: string;

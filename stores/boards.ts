@@ -21,6 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import { defineStore } from "pinia";
 import type { Board, Column, Card, Tag } from "@/types/kanban-types";
+import { getCurrentTimestamp } from "@/utils/dateTime";
 import { useTauriStore } from "@/stores/tauriStore";
 import { generateUniqueID } from "@/utils/idGenerator";
 
@@ -265,6 +266,9 @@ export const useBoardsStore = defineStore("boards", {
       if (!b) return;
       const col = b.columns.find(c => c.id === columnId);
       if (!col) return;
+      if (!card.createdAt) {
+        card.createdAt = getCurrentTimestamp();
+      }
 
       if (addToTop) {
         col.cards.unshift(card);
@@ -292,13 +296,19 @@ export const useBoardsStore = defineStore("boards", {
           ...card,
           // Normalize dueDate to a Date if it was a string; keep null/undefined as is
           dueDate: card.dueDate ? new Date(card.dueDate) : null,
-          tasks: card.tasks ? card.tasks.map(t => ({ ...t })) : undefined,
+          tasks: card.tasks
+            ? card.tasks.map(t => ({
+                ...t,
+                subtasks: t.subtasks ? t.subtasks.map(st => ({ ...st })) : undefined,
+              }))
+            : undefined,
           tags: card.tags ? card.tags.map(t => ({ ...t })) : undefined,
         } as Card;
       }
 
       copy.id = generateUniqueID();
       copy.name = `${copy.name} (copy)`;
+      copy.createdAt = getCurrentTimestamp();
       col.cards.push(copy);
       b.lastEdited = new Date();
     },
@@ -361,19 +371,43 @@ export const useBoardsStore = defineStore("boards", {
     // Debounced auto-save of board properties
     // When testing in the future, we should check if Tauri store is in sync with state
     _setupAutoSave() {
+      const AUTO_SAVE_DEBOUNCE_MS = 700;
       let timeout: ReturnType<typeof setTimeout> | null = null;
-      const schedule = () => {
-        if (timeout) clearTimeout(timeout);
-        timeout = setTimeout(() => {
-          console.log("Auto-saving boards...");
-          this.save().catch((err) => {
-            console.error("Auto-save failed:", err);
-          });
-          timeout = null;
-        }, 100);
+      let isSaving = false;
+      let hasDirtyChanges = false;
+
+      const flushSave = async () => {
+        if (isSaving) {
+          hasDirtyChanges = true;
+          return;
+        }
+
+        isSaving = true;
+        try {
+          await this.save();
+        } catch (err) {
+          console.error("Auto-save failed:", err);
+        } finally {
+          isSaving = false;
+          if (hasDirtyChanges) {
+            hasDirtyChanges = false;
+            schedule();
+          }
+        }
       };
 
-      this.$subscribe(schedule, { detached: true, deep: true});
+      const schedule = () => {
+        hasDirtyChanges = true;
+        if (timeout) clearTimeout(timeout);
+        timeout = setTimeout(() => {
+          timeout = null;
+          if (!hasDirtyChanges) return;
+          hasDirtyChanges = false;
+          void flushSave();
+        }, AUTO_SAVE_DEBOUNCE_MS);
+      };
+
+      this.$subscribe(schedule, { detached: true, deep: true });
     },
   },
 });

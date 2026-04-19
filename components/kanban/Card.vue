@@ -117,6 +117,26 @@ limitations under the License.
           </div>
 
           <div
+            v-if="dueSoonTaskItemCount > 0"
+            class="flex flex-row items-center gap-1"
+          >
+            <PhClock :class="[cardTextColorDim, iconSizeClass]" />
+            <span :class="[cardTextColorDim, taskTextClass]">
+              {{ dueSoonTaskItemCount }}
+            </span>
+          </div>
+
+          <div
+            v-if="overdueTaskItemCount > 0"
+            class="flex flex-row items-center gap-1"
+          >
+            <PhWarningCircle :class="['text-red-500', iconSizeClass]" />
+            <span :class="['text-red-500', taskTextClass]">
+              {{ overdueTaskItemCount }}
+            </span>
+          </div>
+
+          <div
             v-if="dueDate"
             class="flex flex-row items-center gap-1"
             :class="{
@@ -175,6 +195,7 @@ import {
   PhClock,
   PhListChecks,
   PhTextAlignLeft,
+  PhWarningCircle,
 } from "@phosphor-icons/vue";
 
 import {
@@ -280,6 +301,35 @@ const allTasksCompleted = computed(() => {
   if (totalTasks === completedTasks) return true;
 
   return false; //default return
+});
+
+const taskAndSubtaskDueDates = computed(() => {
+  if (!tasks.value) return [] as number[];
+
+  const dueDates: number[] = [];
+
+  for (const task of tasks.value) {
+    if (!task.finished && task.dueDate) {
+      const dateMs = new Date(task.dueDate).getTime();
+      if (!Number.isNaN(dateMs)) dueDates.push(dateMs);
+    }
+
+  }
+
+  return dueDates;
+});
+
+const overdueTaskItemCount = computed(() => {
+  const now = Date.now();
+  return taskAndSubtaskDueDates.value.filter(dueMs => dueMs < now).length;
+});
+
+const dueSoonTaskItemCount = computed(() => {
+  const now = Date.now();
+  const nextDay = now + 24 * 60 * 60 * 1000;
+  return taskAndSubtaskDueDates.value.filter(
+    dueMs => dueMs >= now && dueMs <= nextDay
+  ).length;
 });
 
 // New computed properties for scaling elements

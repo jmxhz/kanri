@@ -27,7 +27,7 @@ limitations under the License.
     "
   >
     <template #content>
-      <div class="flex h-[40rem] w-[36rem] flex-col pl-2">
+      <div class="flex h-[40rem] w-[42rem] max-w-[92vw] flex-col pl-2">
         <div class="mb-4">
           <div class="flex flex-row items-start justify-between gap-12">
             <div
@@ -283,6 +283,9 @@ limitations under the License.
               </template>
             </VDatePicker>
           </div>
+          <p v-if="cardCreatedAt" class="text-dim-2 mt-2 text-xs">
+            创建时间: {{ cardCreatedAt }}
+          </p>
         </div>
 
         <div class="overflow-auto">
@@ -334,89 +337,162 @@ limitations under the License.
                     :class="draggingEnabled ? 'task-drag' : 'nomoredragging'"
                     :index="index"
                   >
-                    <div
-                      class="mb-1 flex w-full flex-row items-center justify-between gap-4"
-                    >
-                      <div
-                        class="flex w-full flex-row items-center justify-start gap-4"
-                      >
-                        <CheckboxRoot
-                          v-model:checked="task.finished"
-                          class="bg-elevation-4 bg-elevation-2-hover border-elevation-5 flex size-5 shrink-0 appearance-none items-center justify-center rounded-[4px] border outline-none"
-                          @update:checked="updateCardTasks()"
+                    <div class="mb-2 flex w-full flex-col gap-1.5">
+                      <div class="flex w-full flex-row items-start justify-between gap-4">
+                        <div class="flex w-full flex-row items-center justify-start gap-4">
+                          <CheckboxRoot
+                            v-model:checked="task.finished"
+                            class="bg-elevation-4 bg-elevation-2-hover border-elevation-5 flex size-5 shrink-0 appearance-none items-center justify-center rounded-[4px] border outline-none"
+                            @update:checked="(checked) => handleTaskCheckedChange(task, checked)"
+                          >
+                            <CheckboxIndicator
+                              class="flex size-full items-center justify-center rounded"
+                            >
+                              <PhCheck
+                                weight="bold"
+                                class="text-accent-lighter size-4"
+                              />
+                            </CheckboxIndicator>
+                          </CheckboxRoot>
+                          <textarea
+                            v-if="
+                              taskEditMode && index === currentlyEditingTaskIndex
+                            "
+                            v-model="currentlyEditingTaskName"
+                            v-focus
+                            class="bg-elevation-2 border-accent -mx-1.5 w-full rounded-md border-b-2 border-dotted px-1.5 py-0.5 outline-none"
+                            @blur="updateTask(index)"
+                            @keydown.enter.exact.prevent="updateTask(index)"
+                          />
+                          <ClickCounter
+                            v-else
+                            @double-click="enableTaskEditMode(index, task)"
+                          >
+                            <div class="w-full">
+                              <span class="text-no-overflow-task block w-full whitespace-pre-wrap break-words">{{
+                                task.name
+                              }}</span>
+                              <span class="text-dim-2 mt-0.5 block text-xs">
+                                Created: {{ task.createdAt || '-' }}
+                                <span v-if="task.completedAt"> | Completed: {{ task.completedAt }}</span>
+                              </span>
+                            </div>
+                          </ClickCounter>
+                        </div>
+                        <div
+                          class="ml-1 flex h-full shrink-0 flex-row items-end gap-1 self-center"
                         >
-                          <CheckboxIndicator
-                            class="flex size-full items-center justify-center rounded"
+                          <button
+                            v-if="!taskEditMode"
+                            class="shrink-0"
+                            @click="enableTaskEditMode(index, task)"
+                          >
+                            <PhPencilSimple
+                              class="text-dim-2 text-accent-hover size-4"
+                            />
+                          </button>
+                          <button
+                            v-if="
+                              taskEditMode && currentlyEditingTaskIndex === index
+                            "
+                            class="shrink-0"
+                            @click="updateTask(index)"
                           >
                             <PhCheck
-                              weight="bold"
-                              class="text-accent-lighter size-4"
+                              class="text-dim-2 text-accent-hover size-4"
                             />
-                          </CheckboxIndicator>
-                        </CheckboxRoot>
-                        <input
-                          v-if="
-                            taskEditMode && index === currentlyEditingTaskIndex
-                          "
-                          v-model="currentlyEditingTaskName"
-                          v-focus
-                          class="bg-elevation-2 border-accent -mx-1.5 w-full rounded-md border-b-2 border-dotted px-1.5 py-0.5 outline-none"
-                          type="text"
-                          @blur="updateTask(index)"
-                          @keypress.enter="updateTask(index)"
-                        />
-                        <ClickCounter
-                          v-else
-                          @double-click="enableTaskEditMode(index, task)"
-                        >
-                          <span class="text-no-overflow-task w-full">{{
-                            task.name
-                          }}</span>
-                        </ClickCounter>
+                          </button>
+                          <button
+                            v-if="
+                              !(
+                                taskEditMode &&
+                                currentlyEditingTaskIndex === index
+                              )
+                            "
+                            class="shrink-0"
+                            @click="deleteTask(index)"
+                          >
+                            <XMarkIcon
+                              class="text-dim-2 text-accent-hover size-4"
+                            />
+                          </button>
+                        </div>
                       </div>
-                      <div
-                        class="ml-1 flex h-full shrink-0 flex-row items-end gap-1 self-center"
-                      >
-                        <button
-                          v-if="!taskEditMode"
-                          class="shrink-0"
-                          @click="enableTaskEditMode(index, task)"
+
+                      <div class="ml-9 flex flex-col gap-2 pr-2">
+                        <label class="text-dim-2 text-xs">
+                          Task due/check time
+                          <input
+                            class="bg-elevation-2 border-elevation-3 mt-0.5 w-full rounded-md border px-1.5 py-0.5 text-xs"
+                            type="datetime-local"
+                            :value="toDateTimeLocalInput(task.dueDate)"
+                            @change="(event) => setTaskDueDate(task, event)"
+                          >
+                        </label>
+
+                        <Container
+                          v-if="task.subtasks && task.subtasks.length > 0"
+                          drag-class="cursor-grabbing"
+                          drag-handle-selector=".subtask-drag"
+                          lock-axis="y"
+                          orientation="vertical"
+                          :get-child-payload="(subtaskIndex: number) => (task.subtasks || [])[subtaskIndex]"
+                          @drop="(dropResult) => onSubtaskDrop(task, dropResult)"
                         >
-                          <PhPencilSimple
-                            class="text-dim-2 text-accent-hover size-4"
-                          />
-                        </button>
-                        <button
-                          v-if="
-                            taskEditMode && currentlyEditingTaskIndex === index
-                          "
-                          class="shrink-0"
-                          @click="updateTask(index)"
-                        >
-                          <PhCheck
-                            class="text-dim-2 text-accent-hover size-4"
-                          />
-                        </button>
-                        <button
-                          v-if="
-                            !(
-                              taskEditMode &&
-                              currentlyEditingTaskIndex === index
-                            )
-                          "
-                          class="shrink-0"
-                          @click="deleteTask(index)"
-                        >
-                          <XMarkIcon
-                            class="text-dim-2 text-accent-hover size-4"
-                          />
-                        </button>
+                          <Draggable
+                            v-for="(subtask, subtaskIndex) in task.subtasks || []"
+                            :key="getSubtaskKey(task, subtask, subtaskIndex)"
+                            :index="subtaskIndex"
+                            :class="draggingEnabled ? 'subtask-drag' : 'nomoredragging'"
+                          >
+                            <div class="bg-elevation-1 flex items-center gap-2 rounded-md px-2 py-1">
+                              <CheckboxRoot
+                                v-model:checked="subtask.finished"
+                                class="bg-elevation-4 bg-elevation-2-hover border-elevation-5 flex size-4 shrink-0 appearance-none items-center justify-center rounded-[4px] border outline-none"
+                                @update:checked="(checked) => handleSubtaskCheckedChange(subtask, checked)"
+                              >
+                                <CheckboxIndicator
+                                  class="flex size-full items-center justify-center rounded"
+                                >
+                                  <PhCheck
+                                    weight="bold"
+                                    class="text-accent-lighter size-3"
+                                  />
+                                </CheckboxIndicator>
+                              </CheckboxRoot>
+                              <span class="w-full whitespace-pre-wrap break-words text-sm">{{ subtask.name }}</span>
+                              <button
+                                class="shrink-0"
+                                @click="deleteSubtask(task, subtaskIndex)"
+                              >
+                                <XMarkIcon
+                                  class="text-dim-2 text-accent-hover size-4"
+                                />
+                              </button>
+                            </div>
+                          </Draggable>
+                        </Container>
+
+                        <div class="flex items-center gap-2">
+                          <input
+                            v-model="subtaskDrafts[getTaskDraftKey(task, index)]"
+                            class="bg-elevation-2 border-elevation-3 w-full rounded-md border px-2 py-1 text-sm"
+                            placeholder="Add subtask..."
+                            @keydown.enter.exact.prevent="createSubtask(task, index)"
+                          >
+                          <button
+                            class="bg-elevation-1 bg-elevation-2-hover rounded-md px-2 py-1 text-xs"
+                            @click="createSubtask(task, index)"
+                          >
+                            Add
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </Draggable>
                 </Container>
               </div>
-              <input
+              <textarea
                 v-if="taskAddMode"
                 ref="newTaskInput"
                 v-model="newTaskName"
@@ -424,8 +500,7 @@ limitations under the License.
                 class="bg-elevation-2 text-normal border-accent-focus pointer-events-auto w-[96%] rounded-md p-1 text-base focus:border-2 focus:border-dotted focus:outline-none"
                 maxlength="1000"
                 :placeholder="$t('modals.editCard.newTaskPlaceholder')"
-                type="text"
-                @keypress.enter="createTask"
+                @keydown.enter.exact.prevent="createTask"
               />
               <div v-if="taskAddMode" class="ml-0.5 mt-0.5 flex flex-row gap-4">
                 <button
@@ -479,9 +554,11 @@ limitations under the License.
 </template>
 
 <script setup lang="ts">
-import type { Card, Task, Tag } from "@/types/kanban-types";
+import type { Card, Task, Tag, Subtask } from "@/types/kanban-types";
 import type { Ref } from "vue";
 
+import { getCurrentTimestamp } from "@/utils/dateTime";
+import { applyDrag } from "@/utils/drag-n-drop";
 import emitter from "@/utils/emitter";
 import { generateUniqueID } from "@/utils/idGenerator";
 import { SwatchIcon } from "@heroicons/vue/24/outline";
@@ -555,9 +632,8 @@ const { locale } = useI18n();
 const columnID = ref("");
 const { textarea: titleTextArea, input: title } = useTextareaAutosize();
 const description = ref("");
-const tasks: Ref<Array<{ finished: boolean; id?: string; name: string }>> = ref(
-  []
-);
+const tasks: Ref<Array<Task>> = ref([]);
+const cardCreatedAt = ref<string | null>(null);
 const selectedColor = ref("");
 
 const dueDate: Ref<Date | null> = ref(null);
@@ -577,7 +653,8 @@ const titleEditing = ref(false);
 
 const newTaskName = ref("");
 const taskAddMode = ref(false);
-const newTaskInput: Ref<HTMLInputElement | null> = ref(null);
+const newTaskInput: Ref<HTMLTextAreaElement | null> = ref(null);
+const subtaskDrafts: Ref<Record<string, string>> = ref({});
 
 const currentlyEditingTaskIndex = ref(-1);
 const currentlyEditingTaskName = ref("");
@@ -610,6 +687,45 @@ const getTaskPercentage = computed(() => {
 
   return (getCheckedTaskNumber.value / tasks.value.length) * 100;
 });
+
+const getTaskDraftKey = (task: Task, index: number) => {
+  return task.id || `task-${index}`;
+};
+
+const getSubtaskKey = (task: Task, subtask: Subtask, subtaskIndex: number) => {
+  return subtask.id || `${task.id || "task"}-subtask-${subtaskIndex}`;
+};
+
+const toDateTimeLocalInput = (date: Date | string | null | undefined) => {
+  if (!date) return "";
+
+  const parsed = new Date(date);
+  if (Number.isNaN(parsed.getTime())) return "";
+
+  const pad = (value: number) => value.toString().padStart(2, "0");
+  const year = parsed.getFullYear();
+  const month = pad(parsed.getMonth() + 1);
+  const day = pad(parsed.getDate());
+  const hours = pad(parsed.getHours());
+  const minutes = pad(parsed.getMinutes());
+
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
+
+const setTaskDueDate = (
+  task: Task,
+  event: Event
+) => {
+  const target = event.target as HTMLInputElement | null;
+  if (!target || !target.value) {
+    task.dueDate = null;
+    updateCardTasks();
+    return;
+  }
+
+  task.dueDate = new Date(target.value).toISOString();
+  updateCardTasks();
+};
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const beforeTagAdd = ({ tag, addTag }: any) => {
@@ -666,9 +782,13 @@ const createTask = () => {
   if (newTaskName.value == null || !/\S/.test(newTaskName.value)) return;
 
   tasks.value.push({
+    completedAt: null,
+    createdAt: getCurrentTimestamp(),
+    dueDate: null,
     finished: false,
     id: generateUniqueID(),
     name: newTaskName.value,
+    subtasks: [],
   });
   newTaskName.value = "";
   taskAddMode.value = false;
@@ -687,9 +807,15 @@ const onTaskDrop = (dropResult: any) => {
   updateCardTasks();
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const onSubtaskDrop = (task: Task, dropResult: any) => {
+  task.subtasks = applyDrag(task.subtasks || [], dropResult);
+  updateCardTasks();
+};
+
 const enableTaskEditMode = (
   index: number,
-  task: { finished: boolean; name: string }
+  task: Task
 ) => {
   taskEditMode.value = true;
   draggingEnabled.value = false;
@@ -712,6 +838,54 @@ const updateTask = (index: number) => {
   taskEditMode.value = false;
   draggingEnabled.value = true;
 
+  updateCardTasks();
+};
+
+const handleTaskCheckedChange = (
+  task: Task,
+  checked: boolean | "indeterminate"
+) => {
+  const isFinished = checked === true;
+  task.finished = isFinished;
+  task.completedAt = isFinished ? getCurrentTimestamp() : null;
+
+  updateCardTasks();
+};
+
+const createSubtask = (task: Task, index: number) => {
+  if (!task.subtasks) {
+    task.subtasks = [];
+  }
+
+  const key = getTaskDraftKey(task, index);
+  const draftName = subtaskDrafts.value[key];
+  if (draftName == null || !/\S/.test(draftName)) return;
+
+  task.subtasks.push({
+    completedAt: null,
+    createdAt: getCurrentTimestamp(),
+    finished: false,
+    id: generateUniqueID(),
+    name: draftName.trim(),
+  });
+
+  subtaskDrafts.value[key] = "";
+  updateCardTasks();
+};
+
+const deleteSubtask = (task: Task, subtaskIndex: number) => {
+  if (!task.subtasks) return;
+  task.subtasks.splice(subtaskIndex, 1);
+  updateCardTasks();
+};
+
+const handleSubtaskCheckedChange = (
+  subtask: Subtask,
+  checked: boolean | "indeterminate"
+) => {
+  const isFinished = checked === true;
+  subtask.finished = isFinished;
+  subtask.completedAt = isFinished ? getCurrentTimestamp() : null;
   updateCardTasks();
 };
 
@@ -776,7 +950,8 @@ const setCardColor = (
   emit("setCardColor", columnID, props.card?.id, color);
 };
 
-const dateToLocalFormat = (date: Date | string) => {
+const dateToLocalFormat = (date: Date | string | null | undefined) => {
+  if (!date) return "";
   const jsLocaleIdentifier = locale.value.replace("_", "-")
 
   if (typeof date === "string") {
@@ -798,6 +973,9 @@ watch(props, (newVal) => {
     newTaskName.value = "";
 
     columnID.value = newVal.columnId;
+    cardCreatedAt.value = newVal.card.createdAt
+      ? String(newVal.card.createdAt)
+      : null;
 
     title.value = newVal.card.name;
     description.value = newVal.card.description || "";
@@ -822,8 +1000,15 @@ watch(props, (newVal) => {
     if (savedTasks.length > 0) {
       savedTasks.forEach((task) => {
         if (!task.id) {
-          console.log("Generating ID for old task, this should not happen again");
           task.id = generateUniqueID();
+        }
+
+        if (task.subtasks && task.subtasks.length > 0) {
+          task.subtasks.forEach((subtask) => {
+            if (!subtask.id) {
+              subtask.id = generateUniqueID();
+            }
+          });
         }
       });
     }
