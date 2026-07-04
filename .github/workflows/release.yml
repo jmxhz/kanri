@@ -21,12 +21,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - platform: 'macos-latest' # for Arm based macs (M1 and above).
-            args: '--target aarch64-apple-darwin'
-          - platform: 'macos-latest' # for Intel based macs.
-            args: '--target x86_64-apple-darwin'
-          - platform: 'ubuntu-22.04' # for Tauri v1 you could replace this with ubuntu-20.04.
-            args: ''
           - platform: 'windows-latest'
             args: ''
 
@@ -92,35 +86,4 @@ jobs:
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}
-
-  publish-kanri-arm:
-      needs: publish-kanri
-      permissions:
-        contents: write
-      strategy:
-        matrix:
-          arch: [arm64, armv7]
-
-      runs-on: ubuntu-22.04
-      steps:
-        - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
-        - uses: actions/setup-node@v4
-          with:
-            node-version: lts/*
-        - name: Install dependencies
-          run: yarn install
-        - name: Build for ${{ matrix.arch }}
-          run: yarn run init:${{matrix.arch}} && yarn run build:${{matrix.arch}}
-
-        - name: Output Tauri release url
-          run: echo ${{ needs.publish-kanri.outputs.upload_url }}
-
-        - name: Upload Multiple Release Assets
-          uses: NBTX/upload-release-assets@v1
-          env:
-            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          with:
-            upload_url: ${{ needs.publish-kanri.outputs.upload_url }}
-            targets: ./src-tauri/target/*/release/bundle/deb/*.deb
-
 
