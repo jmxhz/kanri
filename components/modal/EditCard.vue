@@ -419,65 +419,6 @@ limitations under the License.
                         </div>
                       </div>
 
-                      <div class="ml-9 flex flex-col gap-2 pr-2">
-                        <Container
-                          v-if="task.subtasks && task.subtasks.length > 0"
-                          drag-class="cursor-grabbing"
-                          drag-handle-selector=".subtask-drag"
-                          lock-axis="y"
-                          orientation="vertical"
-                          :get-child-payload="(subtaskIndex: number) => (task.subtasks || [])[subtaskIndex]"
-                          @drop="(dropResult) => onSubtaskDrop(task, dropResult)"
-                        >
-                          <Draggable
-                            v-for="(subtask, subtaskIndex) in task.subtasks || []"
-                            :key="getSubtaskKey(task, subtask, subtaskIndex)"
-                            :index="subtaskIndex"
-                            :class="draggingEnabled ? 'subtask-drag' : 'nomoredragging'"
-                          >
-                            <div class="bg-elevation-1 flex items-center gap-2 rounded-md px-2 py-1">
-                              <CheckboxRoot
-                                v-model:checked="subtask.finished"
-                                class="bg-elevation-4 bg-elevation-2-hover border-elevation-5 flex size-4 shrink-0 appearance-none items-center justify-center rounded-[4px] border outline-none"
-                                @update:checked="(checked) => handleSubtaskCheckedChange(subtask, checked)"
-                              >
-                                <CheckboxIndicator
-                                  class="flex size-full items-center justify-center rounded"
-                                >
-                                  <PhCheck
-                                    weight="bold"
-                                    class="text-accent-lighter size-3"
-                                  />
-                                </CheckboxIndicator>
-                              </CheckboxRoot>
-                              <span class="w-full whitespace-pre-wrap break-words text-sm">{{ subtask.name }}</span>
-                              <button
-                                class="shrink-0"
-                                @click="deleteSubtask(task, subtaskIndex)"
-                              >
-                                <XMarkIcon
-                                  class="text-dim-2 text-accent-hover size-4"
-                                />
-                              </button>
-                            </div>
-                          </Draggable>
-                        </Container>
-
-                        <div class="flex items-center gap-2">
-                          <input
-                            v-model="subtaskDrafts[getTaskDraftKey(task, index)]"
-                            class="bg-elevation-2 border-elevation-3 w-full rounded-md border px-2 py-1 text-sm"
-                            placeholder="Add subtask..."
-                            @keydown.enter.exact.prevent="createSubtask(task, index)"
-                          >
-                          <button
-                            class="bg-elevation-1 bg-elevation-2-hover rounded-md px-2 py-1 text-xs"
-                            @click="createSubtask(task, index)"
-                          >
-                            Add
-                          </button>
-                        </div>
-                      </div>
                     </div>
                   </Draggable>
                 </Container>
@@ -525,7 +466,7 @@ limitations under the License.
 </template>
 
 <script setup lang="ts">
-import type { Card, Task, Subtask } from "@/types/kanban-types";
+import type { Card, Task } from "@/types/kanban-types";
 import type { Ref } from "vue";
 
 import { getCurrentTimestamp } from "@/utils/dateTime";
@@ -610,7 +551,6 @@ const titleEditing = ref(false);
 const newTaskName = ref("");
 const taskAddMode = ref(false);
 const newTaskInput: Ref<HTMLTextAreaElement | null> = ref(null);
-const subtaskDrafts: Ref<Record<string, string>> = ref({});
 
 const currentlyEditingTaskIndex = ref(-1);
 const currentlyEditingTaskName = ref("");
@@ -637,14 +577,6 @@ const getTaskPercentage = computed(() => {
   return (getCheckedTaskNumber.value / tasks.value.length) * 100;
 });
 
-const getTaskDraftKey = (task: Task, index: number) => {
-  return task.id || `task-${index}`;
-};
-
-const getSubtaskKey = (task: Task, subtask: Subtask, subtaskIndex: number) => {
-  return subtask.id || `${task.id || "task"}-subtask-${subtaskIndex}`;
-};
-
 const createTask = () => {
   if (newTaskName.value == null || !/\S/.test(newTaskName.value)) return;
 
@@ -655,7 +587,6 @@ const createTask = () => {
     finished: false,
     id: generateUniqueID(),
     name: newTaskName.value,
-    subtasks: [],
   });
   newTaskName.value = "";
   taskAddMode.value = false;
@@ -671,12 +602,6 @@ const deleteTask = (index: number) => {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const onTaskDrop = (dropResult: any) => {
   tasks.value = applyDrag(tasks.value, dropResult);
-  updateCardTasks();
-};
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const onSubtaskDrop = (task: Task, dropResult: any) => {
-  task.subtasks = applyDrag(task.subtasks || [], dropResult);
   updateCardTasks();
 };
 
@@ -716,43 +641,6 @@ const handleTaskCheckedChange = (
   task.finished = isFinished;
   task.completedAt = isFinished ? getCurrentTimestamp() : null;
 
-  updateCardTasks();
-};
-
-const createSubtask = (task: Task, index: number) => {
-  if (!task.subtasks) {
-    task.subtasks = [];
-  }
-
-  const key = getTaskDraftKey(task, index);
-  const draftName = subtaskDrafts.value[key];
-  if (draftName == null || !/\S/.test(draftName)) return;
-
-  task.subtasks.push({
-    completedAt: null,
-    createdAt: getCurrentTimestamp(),
-    finished: false,
-    id: generateUniqueID(),
-    name: draftName.trim(),
-  });
-
-  subtaskDrafts.value[key] = "";
-  updateCardTasks();
-};
-
-const deleteSubtask = (task: Task, subtaskIndex: number) => {
-  if (!task.subtasks) return;
-  task.subtasks.splice(subtaskIndex, 1);
-  updateCardTasks();
-};
-
-const handleSubtaskCheckedChange = (
-  subtask: Subtask,
-  checked: boolean | "indeterminate"
-) => {
-  const isFinished = checked === true;
-  subtask.finished = isFinished;
-  subtask.completedAt = isFinished ? getCurrentTimestamp() : null;
   updateCardTasks();
 };
 
@@ -866,13 +754,6 @@ watch(props, (newVal) => {
           task.id = generateUniqueID();
         }
 
-        if (task.subtasks && task.subtasks.length > 0) {
-          task.subtasks.forEach((subtask) => {
-            if (!subtask.id) {
-              subtask.id = generateUniqueID();
-            }
-          });
-        }
       });
     }
     tasks.value = savedTasks;

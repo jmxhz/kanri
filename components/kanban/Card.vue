@@ -336,7 +336,7 @@ const cardCompletedAtText = computed(() => {
   return formatCardDate(new Date(Math.max(...completedTimes)));
 });
 
-const taskAndSubtaskDueDates = computed(() => {
+const taskDueDates = computed(() => {
   if (!tasks.value) return [] as number[];
 
   const dueDates: number[] = [];
@@ -354,13 +354,13 @@ const taskAndSubtaskDueDates = computed(() => {
 
 const overdueTaskItemCount = computed(() => {
   const now = Date.now();
-  return taskAndSubtaskDueDates.value.filter(dueMs => dueMs < now).length;
+  return taskDueDates.value.filter(dueMs => dueMs < now).length;
 });
 
 const dueSoonTaskItemCount = computed(() => {
   const now = Date.now();
   const nextDay = now + 24 * 60 * 60 * 1000;
-  return taskAndSubtaskDueDates.value.filter(
+  return taskDueDates.value.filter(
     dueMs => dueMs >= now && dueMs <= nextDay
   ).length;
 });
