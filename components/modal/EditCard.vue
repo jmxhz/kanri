@@ -528,25 +528,6 @@ limitations under the License.
               </button>
             </div>
           </div>
-          <div class="mt-4 flex flex-col pr-6">
-            <h2 class="text-lg font-semibold">
-              {{ $t("modals.editCard.tagsTitle") }}
-            </h2>
-            <vue-tags-input
-              v-model="tag"
-              :tags="tags"
-              :autocomplete-items="filteredItems"
-              placeholder="Add tag..."
-              @tags-changed="updateTags"
-              @before-adding-tag="beforeTagAdd"
-            />
-            <button
-              class="bg-elevation-3 mt-2 w-fit rounded-md px-2 py-0.5 text-sm"
-              @click="closeModalAndOpenTagEdit"
-            >
-              {{ $t("modals.editCard.tagsEdit") }}
-            </button>
-          </div>
         </div>
       </div>
     </template>
@@ -554,7 +535,7 @@ limitations under the License.
 </template>
 
 <script setup lang="ts">
-import type { Card, Task, Tag, Subtask } from "@/types/kanban-types";
+import type { Card, Task, Subtask } from "@/types/kanban-types";
 import type { Ref } from "vue";
 
 import { getCurrentTimestamp } from "@/utils/dateTime";
@@ -573,14 +554,11 @@ import {
 import { vOnClickOutside } from "@vueuse/components";
 //@ts-expect-error library has no types
 import { Container, Draggable } from "vue3-smooth-dnd";
-//@ts-expect-error library has no types
-import { VueTagsInput } from "@vojtechlanka/vue-tags-input";
 import { useSettingsStore } from "@/stores/settings";
 
 const props = defineProps<{
   card: Card | null;
   columnId: string;
-  globalTags: Array<Tag>;
 }>();
 
 const emit = defineEmits<{
@@ -606,12 +584,6 @@ const emit = defineEmits<{
     isCompleted: boolean
   ): void;
   (
-    e: "setCardTags",
-    columnID: string,
-    cardId: string | undefined,
-    tags: Array<Tag>
-  ): void;
-  (
     e: "setCardTasks",
     columnID: string,
     cardId: string | undefined,
@@ -623,8 +595,6 @@ const emit = defineEmits<{
     cardId: string | undefined,
     title: string
   ): void;
-  (e: "addGlobalTag", tag: Tag): void;
-  (e: "openTagEdit"): void;
 }>();
 
 const { locale } = useI18n();
@@ -640,10 +610,6 @@ const dueDate: Ref<Date | null> = ref(null);
 const isDueDateCounterRelative = ref(false);
 const settingsStore = useSettingsStore();
 const isDueDateCompleted = ref(false);
-
-const tag = ref("");
-const tags: Ref<Array<Tag>> = ref([]);
-const autocompleteItems: Ref<Array<Tag>> = ref([]);
 
 const isCustomColor = computed(() => selectedColor.value.startsWith("#"));
 const customColor = ref("#ffffff");
@@ -670,13 +636,6 @@ const enableTitleEditing = () => {
 const enableTaskAddMode = () => {
   taskAddMode.value = true;
 };
-
-const filteredItems = computed(() => {
-  const currentInput = tag.value.trim().toLowerCase();
-  return autocompleteItems.value.filter((item) =>
-    item.text.toLowerCase().includes(currentInput)
-  );
-});
 
 const getCheckedTaskNumber = computed(() => {
   return tasks.value.filter((task) => task.finished).length || 0;
@@ -725,57 +684,6 @@ const setTaskDueDate = (
 
   task.dueDate = new Date(target.value).toISOString();
   updateCardTasks();
-};
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const beforeTagAdd = ({ tag, addTag }: any) => {
-  // get all matches from autocomplete items (starts with), if it is only one, select it
-  const matches = autocompleteItems.value.filter((item) =>
-    item.text.toLowerCase().startsWith(tag.text.toLowerCase())
-  );
-
-  // check if autocomplete items have a tag with the same name
-  const existingTag = autocompleteItems.value.find(
-    (item) => item.text === tag.text
-  );
-
-  if (!existingTag) {
-    if (matches.length === 1 && matches[0]) {
-      tag.text = matches[0].text;
-      tag.id = matches[0].id;
-      tag.color = matches[0].color;
-      tag.style = matches[0].style;
-    } else {
-      tag.id = generateUniqueID();
-    }
-  } else {
-    tag.text = existingTag.text;
-    tag.id = existingTag.id;
-    tag.color = existingTag.color;
-    tag.style = existingTag.style;
-  }
-
-  addTag();
-
-  emit("addGlobalTag", tag);
-};
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const updateTags = (newTags: any) => {
-  tags.value = newTags;
-
-  emit("setCardTags", columnID.value, props.card?.id, tags.value);
-};
-
-const closeModalAndOpenTagEdit = () => {
-  emit("closeModal", columnID.value);
-  titleEditing.value = false;
-  taskAddMode.value = false;
-  showCustomColorPopup.value = false;
-
-  nextTick(() => {
-    emit("openTagEdit");
-  });
 };
 
 const createTask = () => {
@@ -988,10 +896,6 @@ watch(props, (newVal) => {
         : settingsStore.defaultRelativeDueDatesEnabled;
     isDueDateCompleted.value = newVal.card.isDueDateCompleted || false;
 
-    tags.value = newVal.card.tags || [];
-    tag.value = "";
-    autocompleteItems.value = newVal.globalTags;
-
     /**
      * Enforce adding IDs to all card tasks
      * TODO: Potentially remove later on in a version with breaking change to make ID non-optional
@@ -1025,57 +929,6 @@ watch(props, (newVal) => {
 <style>
 .v-popper__popper {
   z-index: 9999999999 !important;
-}
-
-.vue-tags-input {
-  background-color: var(--elevation-1) !important;
-  max-width: none !important;
-}
-
-.vue-tags-input .ti-new-tag-input {
-  background: transparent;
-  color: var(--text-dim-1);
-}
-
-.vue-tags-input .ti-input {
-  padding: 8px 4px !important;
-  background: var(--elevation-1);
-
-  border: 1px solid var(--elevation-3) !important;
-  border-radius: 8px;
-}
-
-.vue-tags-input ::-webkit-input-placeholder {
-  color: var(--text-dim-3);
-}
-
-.vue-tags-input ::-moz-placeholder {
-  color: var(--text-dim-3);
-}
-
-.vue-tags-input :-ms-input-placeholder {
-  color: var(--text-dim-3);
-}
-
-.vue-tags-input :-moz-placeholder {
-  color: var(--text-dim-3);
-}
-
-.vue-tags-input .ti-autocomplete {
-  background: var(--elevation-2);
-  border: 1px solid var(--elevation-3);
-  border-top: none;
-  border-radius: 0 0 8px 8px;
-
-  z-index: 9999999999 !important;
-  overflow: visible;
-
-  position: unset !important;
-}
-
-.vue-tags-input .ti-tag {
-  position: relative;
-  background: var(--elevation-3);
 }
 
 .vc-light {

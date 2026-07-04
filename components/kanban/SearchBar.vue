@@ -59,13 +59,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>. -->
         </li>
         <li
           class="group/item bg-elevation-2-hover flex cursor-pointer items-center justify-between rounded-md p-1 py-1.5"
-          @mousedown="addFilter('tag:')"
-        >
-          <span>tag: search by tag name</span>
-          <span class="group/edit invisible group-hover/item:visible">+</span>
-        </li>
-        <li
-          class="group/item bg-elevation-2-hover flex cursor-pointer items-center justify-between rounded-md p-1 py-1.5"
           @mousedown="addFilter('description:')"
         >
           <span>description: search by description</span>
@@ -96,9 +89,6 @@ const handleInput = () => {
   if (displayModel.value.includes("name:")) {
     activeFilter.value = "name:";
     displayModel.value = displayModel.value.replace("name:", "");
-  } else if (displayModel.value.includes("tag:")) {
-    activeFilter.value = "tag:";
-    displayModel.value = displayModel.value.replace("tag:", "");
   } else if (displayModel.value.includes("description:")) {
     activeFilter.value = "description:";
     displayModel.value = displayModel.value.replace("description:", "");
@@ -144,9 +134,6 @@ watch(
     if (newValue.startsWith("name:")) {
       activeFilter.value = "name:";
       displayModel.value = newValue.replace("name:", "");
-    } else if (newValue.startsWith("tag:")) {
-      activeFilter.value = "tag:";
-      displayModel.value = newValue.replace("tag:", "");
     } else if (newValue.startsWith("description:")) {
       activeFilter.value = "description:";
       displayModel.value = newValue.replace("description:", "");

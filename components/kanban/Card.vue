@@ -76,16 +76,6 @@ limitations under the License.
         </div>
 
         <div
-          v-if="cardTags && cardTags?.length > 0"
-          class="-ml-0.5 -mt-0.5 mb-1 flex flex-row flex-wrap items-center gap-1"
-          @click="$emit('openEditCardModal', card)"
-        >
-          <div v-for="tag in cardTags" :key="tag.id">
-            <KanbanTagDisplay :tag="tag" :zoom-level="zoomLevel" />
-          </div>
-        </div>
-
-        <div
           class="flex flex-row flex-wrap items-center gap-2"
           @click="$emit('openEditCardModal', card)"
         >
@@ -185,7 +175,7 @@ limitations under the License.
 </template>
 
 <script setup lang="ts">
-import type { Card, Tag } from "@/types/kanban-types";
+import type { Card } from "@/types/kanban-types";
 
 import { getContrast } from "~/utils/colorUtils";
 import { XMarkIcon } from "@heroicons/vue/24/solid";
@@ -222,7 +212,6 @@ const emit = defineEmits<{
     cardRef: Ref<HTMLDivElement | null>
   ): void;
   (e: "setCardName", cardId: string | undefined, name: string): void;
-  (e: "updateCardTags", cardId: string | undefined, tags: Array<Tag>): void;
   (e: "duplicateCard", cardId: string | undefined): void;
 }>();
 
@@ -241,8 +230,6 @@ const tasks = ref(props.card.tasks);
 const dueDate = ref(props.card.dueDate);
 const isDueDateRelative = ref(props.card.isDueDateCounterRelative);
 const isDueDateCompleted = ref(props.card.isDueDateCompleted ?? false);
-const cardTags = ref(props.card.tags);
-
 const cardNameEditMode = ref(false);
 const cardNameInput: Ref<HTMLTextAreaElement | null> = ref(null);
 const cardNameText: Ref<HTMLParagraphElement | null> = ref(null);
@@ -255,7 +242,6 @@ watch(
     tasks.value = newData.card.tasks;
     dueDate.value = newData.card.dueDate;
     isDueDateRelative.value = newData.card.isDueDateCounterRelative;
-    cardTags.value = newData.card.tags;
     isDueDateCompleted.value = newData.card.isDueDateCompleted ?? false;
   },
   { deep: true }
@@ -270,7 +256,6 @@ const cardHasNoExtraProperties = computed(() => {
     (!tasks.value || tasks.value.length === 0) &&
     isDescriptionEmpty &&
     !dueDate.value &&
-    (props.card.tags || []).length === 0 &&
     !props.card.name.startsWith("---")
   );
 });

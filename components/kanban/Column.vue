@@ -131,7 +131,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>. -->
           @remove-card="removeCard"
           @remove-card-with-confirmation="removeCardWithConfirmation"
           @set-card-name="setCardName"
-          @update-card-tags="updateCardTags"
           @duplicate-card="duplicateCard"
         />
       </Draggable>
@@ -209,7 +208,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>. -->
 </template>
 
 <script setup lang="ts">
-import type { Card, Tag } from "@/types/kanban-types";
+import type { Card } from "@/types/kanban-types";
 import type { Ref } from "vue";
 
 import { applyDrag } from "@/utils/drag-n-drop";
@@ -247,13 +246,6 @@ const emit = defineEmits<{
     cardId: string | undefined,
     cardRef: Ref<HTMLDivElement | null>
   ): void;
-  (
-    e: "updateCardTags",
-    columnId: string,
-    cardId: string | undefined,
-    tags: Array<Tag>
-  ): void;
-
   // column actions
   (e: "updateColumnTitle", columnId: string, title: string): void;
   (e: "removeColumn", columnId: string): void;
@@ -604,17 +596,6 @@ const filteredCards = computed(() => {
     });
   }
 
-  // check for tag: filter
-  if (searchQuery.startsWith("tag:")) {
-    const tagQuery = searchQuery.substring(4).trim().toLowerCase();
-    if (!tagQuery) return cards.value;
-
-    return cards.value.filter((card) => {
-      const cardTags = card.tags || [];
-      return cardTags.some((tag) => tag.text.toLowerCase().includes(tagQuery));
-    });
-  }
-
   // check for description: filter
   if (searchQuery.startsWith("description:")) {
     const descriptionQuery = searchQuery.substring(12).trim().toLowerCase();
@@ -626,15 +607,11 @@ const filteredCards = computed(() => {
     });
   }
 
-  // default search (name or tags)
+  // default search (name only)
   return cards.value.filter((card) => {
     const cardName = card.name;
-    const cardTags = card.tags || [];
 
-    return (
-      fuzzyMatch(searchQuery, cardName) ||
-      cardTags.some((tag) => tag.text.includes(searchQuery))
-    );
+    return fuzzyMatch(searchQuery, cardName);
   });
 });
 
@@ -713,10 +690,6 @@ const updateColumnTitle = () => {
   titleNew.value = "";
 
   titleEditing.value = false;
-};
-
-const updateCardTags = (cardId: string | undefined, tags: Array<Tag>) => {
-  emit("updateCardTags", props.id, cardId, tags);
 };
 
 const addCard = () => {

@@ -32,28 +32,16 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>. -->
       @setBlur="setBlur"
       @setBrightness="setBrightness"
     />
-    <ModalCardTags
-      v-show="editTagModalVisible"
-      :tags="boardContent?.globalTags ?? []"
-      @closeModal="editTagModalVisible = false"
-      @setTagColor="board.setGlobalTagColor"
-      @removeTag="board.removeGlobalTag"
-      @updateTagName="board.updateGlobalTagName"
-    />
     <ModalEditCard
       v-show="editCardModalVisible"
       :card="currentlyActiveCardInfo.card"
       :column-id="currentlyActiveCardInfo.columnId"
-      :global-tags="boardContent?.globalTags ?? []"
       @closeModal="closeEditCardModal"
       @setCardColor="board.setCardColor"
       @setCardDescription="board.setCardDescription"
       @setCardTasks="board.setCardTasks"
       @setCardTitle="board.setCardName"
       @setCardDueDate="board.setCardDueDate"
-      @setCardTags="board.setCardTags"
-      @addGlobalTag="board.addGlobalTag"
-      @openTagEdit="editTagModalVisible = true"
     />
     <ModalRenameBoard
       v-show="renameBoardModalVisible"
@@ -135,18 +123,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>. -->
               </span>
             </button>
           </div>
-          <div class="flex flex-row gap-2">
-            <button
-              class="bg-elevation-1 bg-elevation-2-hover transition-button flex flex-row gap-1 rounded-md px-4 py-1"
-              @click="editTagModalVisible = true"
-            >
-              <PhHashStraight class="my-auto size-6" />
-              <span class="my-auto ml-0.5 hidden lg:block">
-                {{ $t("pages.kanban.editTags") }}
-              </span>
-            </button>
-          </div>
-
           <KanbanSearchBar v-model="searchQuery" />
         </div>
 
@@ -272,7 +248,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>. -->
                   @removeColumn="openColumnRemoveDialog(column.id)"
                   @removeColumnNoConfirmation="board.removeColumn"
                   @setColumnEditIndex="setColumnEditIndex"
-                  @updateCardTags="board.setCardTags"
                   @updateColumnTitle="board.setColumnTitle"
                   @setCardName="board.setCardName"
                   @duplicateCard="board.duplicateCard"
@@ -308,7 +283,7 @@ import emitter from "@/utils/emitter";
 
 import { PhotoIcon } from "@heroicons/vue/24/outline";
 import { EllipsisHorizontalIcon, PlusIcon } from "@heroicons/vue/24/solid";
-import { PhHashStraight, PhTrash, PhCopy, PhPencil, PhExport, PhPushPin } from "@phosphor-icons/vue";
+import { PhTrash, PhCopy, PhPencil, PhExport, PhPushPin } from "@phosphor-icons/vue";
 
 import { save } from "@tauri-apps/plugin-dialog";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
@@ -354,8 +329,6 @@ const removeCardModalVisible = ref(false);
 const removeAllColumnCardsModalVisible = ref(false);
 const deleteBoardModalVisible = ref(false);
 const renameBoardModalVisible = ref(false);
-
-const editTagModalVisible = ref(false);
 
 const columnRemoveDialog = useConfirmDialog(removeColumnModalVisible);
 const cardRemoveDialog = useConfirmDialog(removeCardModalVisible);
