@@ -177,13 +177,13 @@
     },
     "changelog": {
       "title": "What's new in Kanri {major}.{minor}.{revision}?",
-      "welcome": "Welcome to Kanri! After a while, we are back with a release featuring lots of important fixes and a few small new features. To quickly get notified about new releases and see the development progress, you can join",
+      "welcome": "Welcome to Kanri! This 0.8.3 refresh focuses on clearer card timing and a cleaner card editing flow. To quickly get notified about new releases and see the development progress, you can join",
       "welcomeLink": "the official Discord server.",
       "changes": "Changes: (read changelog for all changes)",
-      "changeItem1": "Fixed a bug where moving a card while searching moved the wrong card.",
-      "changeItem2": "Added setting to automatically set light/dark mode based on the system preference.",
-      "changeItem3": "Added a feature to allow marking due dates as completed.",
-      "changeItem4": "Fixed a bug where deleting a board would not remove it from the sidebar pins."
+      "changeItem1": "Cards now show their creation time directly on the board.",
+      "changeItem2": "Cards with all tasks completed now show a completion time derived from the completed tasks.",
+      "changeItem3": "Removed the per-task due/check time field from the card editor.",
+      "changeItem4": "Slightly widened and cleaned up the card editor layout."
     },
     "confirmation": {
       "sure": "Are you sure?",

@@ -83,7 +83,12 @@ jobs:
         with:
           tagName: app-v__VERSION__ # the action automatically replaces \_\_VERSION\_\_ with the app version.
           releaseName: 'Kanri v__VERSION__'
-          releaseBody: 'See the assets to download this version and install.'
+          releaseBody: |
+            Kanri 0.8.3 refresh:
+            - Cards now show creation time on the board.
+            - Cards show a derived completion time when every task is completed.
+            - Removed the per-task due/check time field from the card editor.
+            - Slightly widened and cleaned up the card editor layout.
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}

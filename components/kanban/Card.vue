@@ -143,6 +143,19 @@ limitations under the License.
             <span :class="taskTextClass">{{ getFormattedDueDate }}</span>
           </div>
         </div>
+
+        <p
+          v-if="cardCreatedAtText || cardCompletedAtText"
+          :class="cardTextColorDim"
+          class="mt-1 w-full text-[11px] leading-snug"
+          @click="$emit('openEditCardModal', card)"
+        >
+          <span v-if="cardCreatedAtText">Created: {{ cardCreatedAtText }}</span>
+          <span v-if="cardCompletedAtText">
+            <span v-if="cardCreatedAtText"> | </span>
+            Completed: {{ cardCompletedAtText }}
+          </span>
+        </p>
       </div>
     </ContextMenuTrigger>
     <ContextMenuPortal to=".default-layout">
@@ -283,9 +296,44 @@ const allTasksCompleted = computed(() => {
   const totalTasks = tasks.value.length;
   const completedTasks = tasks.value.filter((task) => task.finished).length;
 
+  if (totalTasks === 0) return false;
   if (totalTasks === completedTasks) return true;
 
   return false; //default return
+});
+
+const formatCardDate = (date: Date | string | null | undefined) => {
+  if (!date) return null;
+
+  const parsed = new Date(date);
+  if (Number.isNaN(parsed.getTime())) return null;
+
+  const jsLocaleIdentifier = locale.value.replace("_", "-");
+  return parsed.toLocaleString(jsLocaleIdentifier, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
+const cardCreatedAtText = computed(() => {
+  return formatCardDate(props.card.createdAt);
+});
+
+const cardCompletedAtText = computed(() => {
+  if (!tasks.value || !allTasksCompleted.value) return null;
+
+  const completedTimes = tasks.value
+    .map((task) => task.completedAt)
+    .filter((completedAt): completedAt is Date | string => Boolean(completedAt))
+    .map((completedAt) => new Date(completedAt).getTime())
+    .filter((completedAt) => !Number.isNaN(completedAt));
+
+  if (completedTimes.length !== tasks.value.length) return null;
+
+  return formatCardDate(new Date(Math.max(...completedTimes)));
 });
 
 const taskAndSubtaskDueDates = computed(() => {

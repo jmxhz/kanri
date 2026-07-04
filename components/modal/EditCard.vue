@@ -27,7 +27,7 @@ limitations under the License.
     "
   >
     <template #content>
-      <div class="flex h-[40rem] w-[42rem] max-w-[92vw] flex-col pl-2">
+      <div class="flex h-[42rem] max-h-[88vh] w-[48rem] max-w-[94vw] flex-col pl-2">
         <div class="mb-4">
           <div class="flex flex-row items-start justify-between gap-12">
             <div
@@ -199,7 +199,7 @@ limitations under the License.
               <h1
                 v-if="!titleEditing"
                 :v-model="title"
-                class="text-no-overflow pointer-events-auto min-w-[64px] max-w-[475px] pr-5 text-2xl font-bold"
+                class="text-no-overflow pointer-events-auto min-w-[64px] max-w-[640px] pr-5 text-2xl font-bold"
                 @click="enableTitleEditing()"
               >
                 {{ title }}
@@ -209,7 +209,7 @@ limitations under the License.
                 ref="titleTextArea"
                 v-model="title"
                 v-focus
-                class="bg-elevation-2 text-normal border-accent-focus pointer-events-auto w-[450px] text-xl focus:border-2 focus:border-dotted focus:outline-none"
+                class="bg-elevation-2 text-normal border-accent-focus pointer-events-auto w-[620px] max-w-[74vw] text-xl focus:border-2 focus:border-dotted focus:outline-none"
                 maxlength="1000"
                 type="text"
                 @blur="updateTitle"
@@ -284,12 +284,12 @@ limitations under the License.
             </VDatePicker>
           </div>
           <p v-if="cardCreatedAt" class="text-dim-2 mt-2 text-xs">
-            创建时间: {{ cardCreatedAt }}
+            Created: {{ cardCreatedAt }}
           </p>
         </div>
 
-        <div class="overflow-auto">
-          <div class="flex flex-col pr-6">
+        <div class="min-h-0 overflow-auto">
+          <div class="flex flex-col pr-4">
             <h2 class="text-lg font-semibold">
               {{ $t("modals.editCard.descriptionTitle") }}
             </h2>
@@ -310,7 +310,7 @@ limitations under the License.
             <ProgressRoot
               v-if="tasks"
               v-model="getTaskPercentage"
-              class="bg-elevation-2 relative mb-4 h-2 w-[96%] overflow-hidden rounded-full"
+              class="bg-elevation-2 relative mb-4 h-2 w-[98%] overflow-hidden rounded-full"
               style="transform: translateZ(0)"
             >
               <ProgressIndicator
@@ -321,7 +321,7 @@ limitations under the License.
             <div class="flex w-full flex-col gap-1">
               <div
                 v-if="tasks && tasks.length !== 0"
-                class="flex max-h-[148px] w-full flex-col gap-4 overflow-auto pl-1 pr-6"
+                class="flex max-h-[16rem] w-full flex-col gap-4 overflow-auto pl-1 pr-4"
               >
                 <Container
                   drag-class="cursor-grabbing"
@@ -420,16 +420,6 @@ limitations under the License.
                       </div>
 
                       <div class="ml-9 flex flex-col gap-2 pr-2">
-                        <label class="text-dim-2 text-xs">
-                          Task due/check time
-                          <input
-                            class="bg-elevation-2 border-elevation-3 mt-0.5 w-full rounded-md border px-1.5 py-0.5 text-xs"
-                            type="datetime-local"
-                            :value="toDateTimeLocalInput(task.dueDate)"
-                            @change="(event) => setTaskDueDate(task, event)"
-                          >
-                        </label>
-
                         <Container
                           v-if="task.subtasks && task.subtasks.length > 0"
                           drag-class="cursor-grabbing"
@@ -497,7 +487,7 @@ limitations under the License.
                 ref="newTaskInput"
                 v-model="newTaskName"
                 v-focus
-                class="bg-elevation-2 text-normal border-accent-focus pointer-events-auto w-[96%] rounded-md p-1 text-base focus:border-2 focus:border-dotted focus:outline-none"
+                class="bg-elevation-2 text-normal border-accent-focus pointer-events-auto w-[98%] rounded-md p-1 text-base focus:border-2 focus:border-dotted focus:outline-none"
                 maxlength="1000"
                 :placeholder="$t('modals.editCard.newTaskPlaceholder')"
                 @keydown.enter.exact.prevent="createTask"
@@ -520,7 +510,7 @@ limitations under the License.
               </div>
               <button
                 v-if="!taskAddMode"
-                class="bg-elevation-1 bg-elevation-2-hover mr-8 mt-1 flex h-min w-[96%] cursor-pointer flex-row items-center gap-2 rounded-md py-1 pl-0.5 pr-2"
+                class="bg-elevation-1 bg-elevation-2-hover mr-4 mt-1 flex h-min w-[98%] cursor-pointer flex-row items-center gap-2 rounded-md py-1 pl-0.5 pr-2"
                 @click="enableTaskAddMode"
               >
                 <PlusIcon class="text-accent size-6" />
@@ -653,37 +643,6 @@ const getTaskDraftKey = (task: Task, index: number) => {
 
 const getSubtaskKey = (task: Task, subtask: Subtask, subtaskIndex: number) => {
   return subtask.id || `${task.id || "task"}-subtask-${subtaskIndex}`;
-};
-
-const toDateTimeLocalInput = (date: Date | string | null | undefined) => {
-  if (!date) return "";
-
-  const parsed = new Date(date);
-  if (Number.isNaN(parsed.getTime())) return "";
-
-  const pad = (value: number) => value.toString().padStart(2, "0");
-  const year = parsed.getFullYear();
-  const month = pad(parsed.getMonth() + 1);
-  const day = pad(parsed.getDate());
-  const hours = pad(parsed.getHours());
-  const minutes = pad(parsed.getMinutes());
-
-  return `${year}-${month}-${day}T${hours}:${minutes}`;
-};
-
-const setTaskDueDate = (
-  task: Task,
-  event: Event
-) => {
-  const target = event.target as HTMLInputElement | null;
-  if (!target || !target.value) {
-    task.dueDate = null;
-    updateCardTasks();
-    return;
-  }
-
-  task.dueDate = new Date(target.value).toISOString();
-  updateCardTasks();
 };
 
 const createTask = () => {
