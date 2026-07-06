@@ -293,8 +293,10 @@ limitations under the License.
             <h2 class="text-lg font-semibold">
               {{ $t("modals.editCard.descriptionTitle") }}
             </h2>
-            <KanbanDescriptionEditor
+            <KanbanDocumentObjectEditor
               v-model="description"
+              :board-id="boardId"
+              size="description"
               @editorBlurred="updateDescription"
             />
           </div>
@@ -418,6 +420,13 @@ limitations under the License.
                           </button>
                         </div>
                       </div>
+                      <KanbanDocumentObjectEditor
+                        v-model="task.content"
+                        :board-id="boardId"
+                        size="task"
+                        @update:modelValue="updateCardTasks"
+                        @editorBlurred="updateCardTasks"
+                      />
 
                     </div>
                   </Draggable>
@@ -488,6 +497,7 @@ import { Container, Draggable } from "vue3-smooth-dnd";
 import { useSettingsStore } from "@/stores/settings";
 
 const props = defineProps<{
+  boardId: string;
   card: Card | null;
   columnId: string;
 }>();
@@ -583,9 +593,9 @@ const createTask = () => {
   tasks.value.push({
     completedAt: null,
     createdAt: getCurrentTimestamp(),
-    dueDate: null,
     finished: false,
     id: generateUniqueID(),
+    content: "",
     name: newTaskName.value,
   });
   newTaskName.value = "";
@@ -645,7 +655,7 @@ const handleTaskCheckedChange = (
 };
 
 const updateCardTasks = () => {
-  emit("setCardTasks", columnID.value, props.card?.id, tasks.value);
+  emit("setCardTasks", columnID.value, props.card?.id, sanitizeTasks(tasks.value));
 };
 
 const resetDueDate = () => {
@@ -715,6 +725,17 @@ const dateToLocalFormat = (date: Date | string | null | undefined) => {
   return date.toLocaleDateString(jsLocaleIdentifier);
 };
 
+const sanitizeTasks = (taskList: Array<Task>): Array<Task> => {
+  return taskList.map((task) => ({
+    completedAt: task.completedAt ?? null,
+    createdAt: task.createdAt,
+    content: task.content || "",
+    finished: task.finished,
+    id: task.id,
+    name: task.name,
+  }));
+};
+
 watch(customColor, (newVal, oldVal) => {
   if (newVal !== oldVal) {
     setCardColor(columnID.value, props.card?.id, newVal);
@@ -747,7 +768,7 @@ watch(props, (newVal) => {
      * Enforce adding IDs to all card tasks
      * TODO: Potentially remove later on in a version with breaking change to make ID non-optional
      */
-    const savedTasks = newVal.card.tasks || [];
+    const savedTasks = sanitizeTasks(newVal.card.tasks || []);
     if (savedTasks.length > 0) {
       savedTasks.forEach((task) => {
         if (!task.id) {

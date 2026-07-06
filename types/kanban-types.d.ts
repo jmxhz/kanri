@@ -46,17 +46,8 @@ export declare interface Task {
   createdAt?: Date | string;
   finished: boolean;
   id?: string;
-  dueDate?: Date | string | null;
   name: string;
-  subtasks?: Array<Subtask>;
-}
-
-export declare interface Subtask {
-  completedAt?: Date | string | null;
-  createdAt?: Date | string;
-  finished: boolean;
-  id?: string;
-  name: string;
+  content?: string;
 }
 
 export declare interface Tag {

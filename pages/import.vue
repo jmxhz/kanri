@@ -174,6 +174,7 @@ import {
 } from "@/types/json-schemas";
 import { ask, message, open, save } from "@tauri-apps/plugin-dialog";
 import { readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
+import { invoke } from "@tauri-apps/api/core";
 import { useI18n } from "vue-i18n";
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports
 import { ZodError, z } from "zod";
@@ -192,13 +193,21 @@ onMounted(async () => {
   boards.value = ((await store.get("boards")) as Board[]) || [];
 });
 
+const readKanriImportFile = async (path: string) => {
+  if (path.toLowerCase().endsWith(".zip")) {
+    return await invoke<string>("kanri_import_bundle", { zipPath: path });
+  }
+
+  return await readTextFile(path);
+};
+
 const exportJSON = async () => {
   const filePath = await save({
-    defaultPath: `./${new Date().toISOString().slice(0, 10)}_kanri_data_export.json`,
+    defaultPath: `./${new Date().toISOString().slice(0, 10)}_kanri_data_export.zip`,
     filters: [
       {
-        extensions: ["json"],
-        name: "JSON File",
+        extensions: ["zip", "json"],
+        name: "Kanri Export",
       },
     ],
     title: t("pages.import.exportFullJsonDialogTitle"),
@@ -245,7 +254,15 @@ const exportJSON = async () => {
   );
 
   if (filePath == null) return;
-  await writeTextFile(filePath, fileContents);
+  if (filePath.toLowerCase().endsWith(".zip")) {
+    await invoke("kanri_export_bundle", {
+      jsonContent: fileContents,
+      boardIds: ((savedBoards as Board[]) || []).map((board) => board.id),
+      outputPath: filePath,
+    });
+  } else {
+    await writeTextFile(filePath, fileContents);
+  }
 
   await message(t("pages.import.exportFullJsonSuccessMessage"), {
     kind: "info",
@@ -254,11 +271,11 @@ const exportJSON = async () => {
 
 const exportSingleBoard = async (boardId: string) => {
   const filePath = await save({
-    defaultPath: `./${new Date().toISOString().slice(0, 10)}_kanri_board_export_${boardId}.json`,
+    defaultPath: `./${new Date().toISOString().slice(0, 10)}_kanri_board_export_${boardId}.zip`,
     filters: [
       {
-        extensions: ["json"],
-        name: "JSON File",
+        extensions: ["zip", "json"],
+        name: "Kanri Board Export",
       },
     ],
     title: t("pages.import.exportPartialJsonDialogTitle"),
@@ -277,7 +294,15 @@ const exportSingleBoard = async (boardId: string) => {
 
   const fileContents = JSON.stringify(boardToExport, null, 2);
 
-  await writeTextFile(filePath, fileContents);
+  if (filePath.toLowerCase().endsWith(".zip")) {
+    await invoke("kanri_export_bundle", {
+      jsonContent: fileContents,
+      boardIds: [boardToExport.id],
+      outputPath: filePath,
+    });
+  } else {
+    await writeTextFile(filePath, fileContents);
+  }
 
   await message(t("pages.import.exportPartialJsonSuccessMessage"), {
     kind: "info",
@@ -288,8 +313,8 @@ const importFromKanriFull = async () => {
   const selected = await open({
     filters: [
       {
-        extensions: ["json"],
-        name: "JSON File",
+        extensions: ["json", "zip"],
+        name: "Kanri Export",
       },
     ],
     multiple: false,
@@ -297,7 +322,7 @@ const importFromKanriFull = async () => {
 
   if (selected === null) return;
 
-  const textFile = await readTextFile(selected as string);
+  const textFile = await readKanriImportFile(selected as string);
   if (!textFile) return;
 
   let parsedJson = null;
@@ -376,8 +401,8 @@ const importFromKanbanElectronFull = async () => {
   const selected = await open({
     filters: [
       {
-        extensions: ["json"],
-        name: "JSON File",
+        extensions: ["json", "zip"],
+        name: "Kanri Export",
       },
     ],
     multiple: false,
@@ -455,8 +480,8 @@ const importFromKanriBoard = async () => {
   const selected = await open({
     filters: [
       {
-        extensions: ["json"],
-        name: "JSON File",
+        extensions: ["json", "zip"],
+        name: "Kanri Board Export",
       },
     ],
     multiple: true,
@@ -530,7 +555,7 @@ const importFromKanriBoard = async () => {
 };
 
 const kanriParse = async (board: string) => {
-  const textFile = await readTextFile(board);
+  const textFile = await readKanriImportFile(board);
   if (!textFile) return;
 
   let parsedJson = null;

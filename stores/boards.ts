@@ -24,8 +24,52 @@ import type { Board, Column, Card, Tag } from "@/types/kanban-types";
 import { getCurrentTimestamp } from "@/utils/dateTime";
 import { useTauriStore } from "@/stores/tauriStore";
 import { generateUniqueID } from "@/utils/idGenerator";
+import { invoke } from "@tauri-apps/api/core";
+import {
+  getDocumentAssets,
+  replaceDocumentAssetPaths,
+} from "@/utils/documentObjects";
 
 type Pin = { id: string; title: string; pinIcon?: string; pinIconText?: string };
+
+const sanitizeCardTasks = (card: Card) => {
+  if (!card.tasks) return;
+
+  card.tasks = card.tasks.map((task) => ({
+    completedAt: task.completedAt ?? null,
+    createdAt: task.createdAt,
+    content: task.content || "",
+    finished: task.finished,
+    id: task.id,
+    name: task.name,
+  }));
+};
+
+const sanitizeBoard = (board: Board) => {
+  for (const column of board.columns) {
+    for (const card of column.cards) {
+      sanitizeCardTasks(card);
+    }
+  }
+
+  return board;
+};
+
+const collectCardAssetPaths = (card: Card) => {
+  const paths = getDocumentAssets(card.description).map((asset) => asset.blobPath);
+  for (const task of card.tasks || []) {
+    paths.push(...getDocumentAssets(task.content).map((asset) => asset.blobPath));
+  }
+
+  return [...new Set(paths)];
+};
+
+const replaceCardAssetPaths = (card: Card, pathMap: Record<string, string>) => {
+  card.description = replaceDocumentAssetPaths(card.description, pathMap);
+  for (const task of card.tasks || []) {
+    task.content = replaceDocumentAssetPaths(task.content, pathMap) || "";
+  }
+};
 
 export const useBoardsStore = defineStore("boards", {
   state: () => ({
@@ -42,7 +86,9 @@ export const useBoardsStore = defineStore("boards", {
       if (this.initialized) return;
       const tauri = useTauriStore().store;
 
-      this.boards = (await tauri.get("boards")) || [];
+      this.boards = ((await tauri.get("boards")) || []).map((board: Board) =>
+        sanitizeBoard(board)
+      );
       this.pins = (await tauri.get("pins")) || [];
       this.initialized = true;
 
@@ -50,12 +96,14 @@ export const useBoardsStore = defineStore("boards", {
     },
     async forceReloadBoards() {
       const tauri = useTauriStore().store;
-      this.boards = (await tauri.get("boards")) || [];
+      this.boards = ((await tauri.get("boards")) || []).map((board: Board) =>
+        sanitizeBoard(board)
+      );
     },
     async save() {
       const tauri = useTauriStore().store;
       try {
-        await tauri.set("boards", this.boards);
+        await tauri.set("boards", this.boards.map((board) => sanitizeBoard(board)));
         await tauri.set("pins", this.pins);
         await tauri.save();
       } catch (error) {
@@ -68,6 +116,7 @@ export const useBoardsStore = defineStore("boards", {
     // Board CRUD
     upsertBoard(board: Board) {
       const i = this.boards.findIndex(b => b.id === board.id);
+      sanitizeBoard(board);
       board.lastEdited = new Date();
 
       if (i === -1) {
@@ -87,7 +136,7 @@ export const useBoardsStore = defineStore("boards", {
       this.boards = this.boards.filter(b => b.id !== id);
       this.pins = this.pins.filter(p => p.id !== id);
     },
-    duplicateBoard(id: string) {
+    async duplicateBoard(id: string) {
       const b = this.boardById(id);
       if (!b) return;
       
@@ -96,6 +145,22 @@ export const useBoardsStore = defineStore("boards", {
       copy.title = `${copy.title} (duplicate)`;
       copy.lastEdited = new Date();
       copy.createdAt = new Date();
+      const pathMap = await invoke<Record<string, string>>(
+        "kanri_copy_board_assets",
+        {
+          sourceBoardId: b.id,
+          targetBoardId: copy.id,
+          blobPaths: b.columns.flatMap((column) =>
+            column.cards.flatMap((card) => collectCardAssetPaths(card))
+          ),
+        }
+      );
+      for (const column of copy.columns) {
+        for (const card of column.cards) {
+          replaceCardAssetPaths(card, pathMap);
+        }
+      }
+      sanitizeBoard(copy);
       this.boards.push(copy);
     },
     renameBoard(id: string, title: string) {
@@ -277,7 +342,7 @@ export const useBoardsStore = defineStore("boards", {
       }
       b.lastEdited = new Date();
     },
-    duplicateCard(boardId: string, columnId: string, cardId: string) {
+    async duplicateCard(boardId: string, columnId: string, cardId: string) {
       const b = this.boardById(boardId);
       if (!b) return;
       const col = b.columns.find(c => c.id === columnId);
@@ -299,7 +364,6 @@ export const useBoardsStore = defineStore("boards", {
           tasks: card.tasks
             ? card.tasks.map(t => ({
                 ...t,
-                subtasks: t.subtasks ? t.subtasks.map(st => ({ ...st })) : undefined,
               }))
             : undefined,
           tags: card.tags ? card.tags.map(t => ({ ...t })) : undefined,
@@ -309,6 +373,16 @@ export const useBoardsStore = defineStore("boards", {
       copy.id = generateUniqueID();
       copy.name = `${copy.name} (copy)`;
       copy.createdAt = getCurrentTimestamp();
+      const pathMap = await invoke<Record<string, string>>(
+        "kanri_copy_board_assets",
+        {
+          sourceBoardId: boardId,
+          targetBoardId: boardId,
+          blobPaths: collectCardAssetPaths(card),
+        }
+      );
+      replaceCardAssetPaths(copy, pathMap);
+      sanitizeCardTasks(copy);
       col.cards.push(copy);
       b.lastEdited = new Date();
     },
@@ -348,7 +422,7 @@ export const useBoardsStore = defineStore("boards", {
       col.cards = nextCards;
       b.lastEdited = new Date();
     },
-    moveCard(sourceBoardId: string, targetBoardId: string, sourceColumnId: string, targetColumnId: string, cardId: string) {
+    async moveCard(sourceBoardId: string, targetBoardId: string, sourceColumnId: string, targetColumnId: string, cardId: string) {
       if (sourceColumnId === targetColumnId) return;
 
       const sourceBoard = this.boardById(sourceBoardId);
@@ -360,9 +434,22 @@ export const useBoardsStore = defineStore("boards", {
       if (!sourceCol || !targetCol) return;
 
       const cardIndex = sourceCol.cards.findIndex(c => c.id === cardId);
+      if (cardIndex === -1) return;
 
       const [card] = sourceCol.cards.splice(cardIndex, 1);
       if (card === undefined) return;
+      if (sourceBoardId !== targetBoardId) {
+        const pathMap = await invoke<Record<string, string>>(
+          "kanri_copy_board_assets",
+          {
+            sourceBoardId,
+            targetBoardId,
+            blobPaths: collectCardAssetPaths(card),
+          }
+        );
+        replaceCardAssetPaths(card, pathMap);
+      }
+      sanitizeCardTasks(card);
       targetCol.cards.push(card);
       targetBoard.lastEdited = new Date();
       sourceBoard.lastEdited = new Date();

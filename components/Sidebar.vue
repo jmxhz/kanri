@@ -88,6 +88,16 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>. -->
         </template>
       </Tooltip>
 
+      <Tooltip label="Assets">
+        <template #trigger>
+          <nuxt-link to="/assets">
+            <div class="bg-elevation-2-hover transition-button rounded-md p-2">
+              <PhFile class="size-7" />
+            </div>
+          </nuxt-link>
+        </template>
+      </Tooltip>
+
       <Tooltip :label="$t('components.sidebar.help')">
         <template #trigger>
           <button
@@ -117,6 +127,7 @@ import {
   PhArrowBendUpLeft,
   PhHouse,
   PhArrowsLeftRight,
+  PhFile,
   PhGearSix,
   PhQuestion,
 } from "@phosphor-icons/vue";

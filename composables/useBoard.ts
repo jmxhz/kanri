@@ -58,9 +58,9 @@ export function useBoard(id: string | Ref<string>) {
     if (!board.value) return;
     store.updateBoardPin(board.value.id);
   }
-  function duplicate() {
+  async function duplicate() {
     if (!board.value) return;
-    store.duplicateBoard(board.value.id);
+    await store.duplicateBoard(board.value.id);
   }
   function remove() {
     if (!board.value) return;

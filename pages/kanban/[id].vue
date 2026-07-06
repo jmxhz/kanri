@@ -34,6 +34,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>. -->
     />
     <ModalEditCard
       v-show="editCardModalVisible"
+      :board-id="boardContent.id"
       :card="currentlyActiveCardInfo.card"
       :column-id="currentlyActiveCardInfo.columnId"
       @closeModal="closeEditCardModal"
@@ -287,6 +288,7 @@ import { PhTrash, PhCopy, PhPencil, PhExport, PhPushPin } from "@phosphor-icons/
 
 import { save } from "@tauri-apps/plugin-dialog";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
+import { invoke } from "@tauri-apps/api/core";
 import { useConfirmDialog } from "@vueuse/core";
 //@ts-expect-error this library doesn't have types
 import { Container, Draggable } from "vue3-smooth-dnd";
@@ -649,11 +651,11 @@ const openColumnRemoveDialog = async (columnID: string) => {
 
 const exportBoardToJson = async () => {
   const filePath = await save({
-    defaultPath: `./${new Date().toISOString().slice(0, 10)}_kanri_board_${boardContent.value.id}_export.json`,
+    defaultPath: `./${new Date().toISOString().slice(0, 10)}_kanri_board_${boardContent.value.id}_export.zip`,
     filters: [
       {
-        extensions: ["json"],
-        name: "JSON File",
+        extensions: ["zip", "json"],
+        name: "Kanri Board Export",
       },
     ],
     title: "Select file to export data to",
@@ -662,7 +664,15 @@ const exportBoardToJson = async () => {
   const fileContents = JSON.stringify(boardContent.value, null, 2);
 
   if (filePath == null) return;
-  await writeTextFile(filePath, fileContents);
+  if (filePath.toLowerCase().endsWith(".zip")) {
+    await invoke("kanri_export_bundle", {
+      jsonContent: fileContents,
+      boardIds: [boardContent.value.id],
+      outputPath: filePath,
+    });
+  } else {
+    await writeTextFile(filePath, fileContents);
+  }
 };
 
 const renameBoardModal = (id: string | undefined) => {
@@ -678,8 +688,8 @@ const renameBoardModal = (id: string | undefined) => {
   renameBoardModalVisible.value = true;
 };
 
-const duplicateBoard = () => {
-  board.duplicate();
+const duplicateBoard = async () => {
+  await board.duplicate();
 
   router.push("/");
 };

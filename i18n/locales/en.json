@@ -177,13 +177,13 @@
     },
     "changelog": {
       "title": "What's new in Kanri {major}.{minor}.{revision}?",
-      "welcome": "Welcome to Kanri! This 0.8.3 refresh focuses on clearer card timing, a simpler task editor, and a Windows x64-only release package. To quickly get notified about new releases and see the development progress, you can join",
+      "welcome": "Welcome to Kanri! This 0.8.4 release focuses on embedded card attachments, simpler tasks, and safer board exports. To quickly get notified about new releases and see the development progress, you can join",
       "welcomeLink": "the official Discord server.",
       "changes": "Changes: (read changelog for all changes)",
-      "changeItem1": "Cards now show their creation time directly on the board.",
-      "changeItem2": "Cards with all tasks completed now show a completion time derived from the completed tasks.",
-      "changeItem3": "Removed subtasks from the card editor so cards stay focused on the main task list.",
-      "changeItem4": "Removed the per-task due/check time field and tightened the card editor layout."
+      "changeItem1": "Card descriptions and task content can now contain embedded image and file objects.",
+      "changeItem2": "New attachments are copied into each board's Kanri asset folder instead of linking to the original file path.",
+      "changeItem3": "Removed subtasks and per-task due dates while keeping old data import-compatible.",
+      "changeItem4": "Kanri exports can now include board assets in a zip bundle, with JSON export still available."
     },
     "confirmation": {
       "sure": "Are you sure?",
